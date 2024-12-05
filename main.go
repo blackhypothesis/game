@@ -9,10 +9,13 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const degree = math.Pi / 180
+const (
+	SCREENWIDTH  = 3200
+	SCREENHEIGHT = 2000
+)
 
 type Game struct {
-	Player GameObject
+	Player *GameObject
 }
 
 type Vector struct {
@@ -21,12 +24,11 @@ type Vector struct {
 }
 
 type GameObject struct {
+	Sprite   *ebiten.Image
 	Position Vector
 	Rotation float64
-	Speed    Vector
-	Sprite   *ebiten.Image
+	Speed    float64
 	HalfSize Vector
-	Options  *ebiten.DrawImageOptions
 }
 
 type GameObjectEdit interface {
@@ -53,55 +55,74 @@ func loadImage(name string) *ebiten.Image {
 	return ebiten.NewImageFromImage(img)
 }
 
-func NewGameObject(assetPath string) *GameObject {
+func NewGameObject(assetPath string, position Vector, rotation float64, speed float64) *GameObject {
 	spriteImage := loadImage(assetPath)
 
-	return &GameObject{
-		Position: Vector{0, 0},
-		Rotation: 0,
-		Speed:    Vector{0, 0},
-		Sprite:   spriteImage,
-		HalfSize: Vector{float64(spriteImage.Bounds().Dx()) / 2, float64(spriteImage.Bounds().Dy()) / 2},
-		Options:  new(ebiten.DrawImageOptions),
-	}
-}
-
-func (g *GameObject) RotateRelative(angle float64) {
-	rad := angle * degree
-	g.Rotation = g.Rotation + rad
-	opts := new(ebiten.DrawImageOptions)
-	opts.GeoM.Translate(-g.HalfSize.X, -g.HalfSize.y)
-	opts.GeoM.Rotate(g.Rotation)
-	opts.GeoM.Translate(g.Position.X, g.Position.X)
+	gameObject := new(GameObject)
+	gameObject.Sprite = spriteImage
+	gameObject.Position = position
+	gameObject.Rotation = rotation
+	gameObject.Speed = speed
+	gameObject.HalfSize = Vector{float64(spriteImage.Bounds().Dx()) / 2, float64(spriteImage.Bounds().Dy()) / 2}
+	return gameObject
 }
 
 func (g *GameObject) Move() {
+	g.Position.X += math.Sin(g.Rotation) * g.Speed
+	g.Position.Y += -math.Cos(g.Rotation) * g.Speed
+}
+
+func (g *GameObject) Update() {
+	g.Move()
 
 }
 
+func (g *GameObject) Draw(screen *ebiten.Image) {
+	opts := new(ebiten.DrawImageOptions)
+	opts.GeoM.Translate(-g.HalfSize.X, -g.HalfSize.Y)
+	opts.GeoM.Rotate(g.Rotation)
+	opts.GeoM.Translate(g.Position.X, g.Position.Y)
+	screen.DrawImage(g.Sprite, opts)
+}
+
 func (g *Game) Update() error {
+	if ebiten.IsKeyPressed(ebiten.KeyDown) {
+		g.Player.Speed -= 0.1
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyUp) {
+		g.Player.Speed += 0.1
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
+		g.Player.Rotation += math.Pi / 90
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyRight) {
+		g.Player.Rotation -= math.Pi / 90
+	}
+
+	g.Player.Update()
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	op := &ebiten.DrawImageOptions{}
-	// op.GeoM.Translate(50, 70)
-	// op.GeoM.Rotate(-45.0 * math.Pi / 180.0)
-	// op.GeoM.Scale(1, -1)
-
-	op = RotateSprite(PlayerSprite, 68)
-
-	screen.DrawImage(PlayerSprite, op)
+	g.Player.Draw(screen)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return outsideWidth, outsideHeight
+	return SCREENWIDTH, SCREENHEIGHT
 }
 
 func main() {
-	g := &Game{}
+	game := &Game{
+		Player: NewGameObject("assets/PNG/playerShip1_blue.png", Vector{X: 100, Y: 100}, 180*math.Pi/180, 0.5),
+	}
+	game.Player.Position = Vector{
+		X: 100,
+		Y: 100,
+	}
 
-	err := ebiten.RunGame(g)
+	ebiten.SetWindowSize(3200, 2000)
+	ebiten.SetWindowTitle("My First Game")
+	err := ebiten.RunGame(game)
 	if err != nil {
 		panic(err)
 	}
