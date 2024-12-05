@@ -70,6 +70,23 @@ func NewGameObject(assetPath string, position Vector, rotation float64, speed fl
 func (g *GameObject) Move() {
 	g.Position.X += math.Sin(g.Rotation) * g.Speed
 	g.Position.Y += -math.Cos(g.Rotation) * g.Speed
+
+	if g.Position.X > SCREENWIDTH {
+		g.Position.X -= SCREENWIDTH
+	}
+
+	if g.Position.X < 0 {
+		g.Position.X += SCREENWIDTH
+	}
+
+	if g.Position.Y > SCREENHEIGHT {
+		g.Position.Y -= SCREENHEIGHT
+	}
+
+	if g.Position.Y < 0 {
+		g.Position.Y += SCREENHEIGHT
+	}
+
 }
 
 func (g *GameObject) Update() {
@@ -114,10 +131,6 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 func main() {
 	game := &Game{
 		Player: NewGameObject("assets/PNG/playerShip1_blue.png", Vector{X: 100, Y: 100}, 180*math.Pi/180, 0.5),
-	}
-	game.Player.Position = Vector{
-		X: 100,
-		Y: 100,
 	}
 
 	ebiten.SetWindowSize(3200, 2000)
