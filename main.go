@@ -2,9 +2,11 @@ package main
 
 import (
 	"embed"
-	"image"
+	"fmt"
 	_ "image/png"
 	"math"
+	"math/rand/v2"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -15,99 +17,26 @@ const (
 )
 
 type Game struct {
-	Player *GameObject
-}
-
-type Vector struct {
-	X float64
-	Y float64
-}
-
-type GameObject struct {
-	Sprite   *ebiten.Image
-	Position Vector
-	Rotation float64
-	Speed    float64
-	HalfSize Vector
-}
-
-type GameObjectEdit interface {
-	RotateRelative(angle float64)
-	Move()
+	Player      *GameObject
+	Bullets     []GameObject
+	Meteors     []GameObject
+	AttackTimer *Timer
+	MeteorTimer *Timer
 }
 
 //go:embed assets/*
 var assets embed.FS
 var PlayerSprite = loadImage("assets/PNG/playerShip1_blue.png")
-
-func loadImage(name string) *ebiten.Image {
-	f, err := assets.Open(name)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	img, _, err := image.Decode(f)
-	if err != nil {
-		panic(err)
-	}
-
-	return ebiten.NewImageFromImage(img)
-}
-
-func NewGameObject(assetPath string, position Vector, rotation float64, speed float64) *GameObject {
-	spriteImage := loadImage(assetPath)
-
-	gameObject := new(GameObject)
-	gameObject.Sprite = spriteImage
-	gameObject.Position = position
-	gameObject.Rotation = rotation
-	gameObject.Speed = speed
-	gameObject.HalfSize = Vector{float64(spriteImage.Bounds().Dx()) / 2, float64(spriteImage.Bounds().Dy()) / 2}
-	return gameObject
-}
-
-func (g *GameObject) Move() {
-	g.Position.X += math.Sin(g.Rotation) * g.Speed
-	g.Position.Y += -math.Cos(g.Rotation) * g.Speed
-
-	if g.Position.X > SCREENWIDTH {
-		g.Position.X -= SCREENWIDTH
-	}
-
-	if g.Position.X < 0 {
-		g.Position.X += SCREENWIDTH
-	}
-
-	if g.Position.Y > SCREENHEIGHT {
-		g.Position.Y -= SCREENHEIGHT
-	}
-
-	if g.Position.Y < 0 {
-		g.Position.Y += SCREENHEIGHT
-	}
-
-}
-
-func (g *GameObject) Update() {
-	g.Move()
-
-}
-
-func (g *GameObject) Draw(screen *ebiten.Image) {
-	opts := new(ebiten.DrawImageOptions)
-	opts.GeoM.Translate(-g.HalfSize.X, -g.HalfSize.Y)
-	opts.GeoM.Rotate(g.Rotation)
-	opts.GeoM.Translate(g.Position.X, g.Position.Y)
-	screen.DrawImage(g.Sprite, opts)
-}
+var MeteorSprites = loadImages("assets/PNG/Meteors/*")
 
 func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		g.Player.Speed -= 0.1
+		g.Player.Speed.X += -math.Sin(g.Player.Rotation) / 10
+		g.Player.Speed.Y += math.Cos(g.Player.Rotation) / 10
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		g.Player.Speed += 0.1
+		g.Player.Speed.X += math.Sin(g.Player.Rotation) / 10
+		g.Player.Speed.Y += -math.Cos(g.Player.Rotation) / 10
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
 		g.Player.Rotation += math.Pi / 90
@@ -116,12 +45,37 @@ func (g *Game) Update() error {
 		g.Player.Rotation -= math.Pi / 90
 	}
 
+	if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		fmt.Println("Shoot, ...")
+	}
+
 	g.Player.Update()
+	for i := range g.Bullets {
+		g.Bullets[i].Update()
+	}
+
+	for i := range g.Meteors {
+		g.Meteors[i].Update()
+	}
+
 	return nil
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	g.MeteorTimer.Update()
+	if g.MeteorTimer.IsReady() {
+		g.MeteorTimer.Reset()
+		g.Meteors = append(g.Meteors, *NewGameObject("assets/PNG/Meteors/meteorBrown_big1.png",
+			Vector{X: 500, Y: 500},
+			rand.Float64()*2*math.Pi,
+			Vector{randomFloat(-3, 3), randomFloat(-3, 3)},
+			NewMessageQueue()))
+	}
 	g.Player.Draw(screen)
+
+	for i := range g.Meteors {
+		g.Meteors[i].Draw(screen)
+	}
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -129,8 +83,16 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 func main() {
+
+	mq := NewMessageQueue()
+
 	game := &Game{
-		Player: NewGameObject("assets/PNG/playerShip1_blue.png", Vector{X: 100, Y: 100}, 180*math.Pi/180, 0.5),
+		Player: NewGameObject("assets/PNG/playerShip1_blue.png",
+			Vector{X: 100, Y: 100},
+			rand.Float64()*2*math.Pi,
+			Vector{0, 0},
+			mq),
+		MeteorTimer: NewTimer(100 * time.Millisecond),
 	}
 
 	ebiten.SetWindowSize(3200, 2000)
