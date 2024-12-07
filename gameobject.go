@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -10,12 +12,13 @@ type Vector struct {
 }
 
 type GameObject struct {
-	Sprite   *ebiten.Image
-	Position Vector
-	Rotation float64
-	Speed    Vector
-	HalfSize Vector
-	MsgQueue *MessageQueue
+	Sprite    *ebiten.Image
+	Position  Vector
+	Rotation  float64
+	Speed     Vector
+	HalfSize  Vector
+	MsgQueue  *MessageQueue
+	CreatedAt time.Time
 }
 
 func NewGameObject(assetPath string, position Vector, rotation float64, speed Vector, msgQueue *MessageQueue) *GameObject {
@@ -28,6 +31,7 @@ func NewGameObject(assetPath string, position Vector, rotation float64, speed Ve
 	gameObject.Speed = speed
 	gameObject.HalfSize = Vector{float64(spriteImage.Bounds().Dx()) / 2, float64(spriteImage.Bounds().Dy()) / 2}
 	gameObject.MsgQueue = msgQueue
+	gameObject.CreatedAt = time.Now()
 	return gameObject
 }
 

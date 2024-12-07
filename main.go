@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	"fmt"
 	_ "image/png"
 	"math"
 	"math/rand/v2"
@@ -12,22 +11,24 @@ import (
 )
 
 const (
-	SCREENWIDTH  = 3200
-	SCREENHEIGHT = 2000
+	SCREENWIDTH  = 2000
+	SCREENHEIGHT = 1500
 )
 
 type Game struct {
 	Player      *GameObject
 	Bullets     []GameObject
 	Meteors     []GameObject
-	AttackTimer *Timer
+	BulletTimer *Timer
 	MeteorTimer *Timer
 }
 
 //go:embed assets/*
 var assets embed.FS
-var PlayerSprite = loadImage("assets/PNG/playerShip1_blue.png")
-var MeteorSprites = loadImages("assets/PNG/Meteors/*")
+
+// var playerSprite = loadImage("assets/PNG/playerShip1_blue.png")
+// var bulletSprite = loadImage("assets/PNG/Lasers/laserGreen05.png")
+// var meteorSprites = loadImages("assets/PNG/Meteors/*")
 
 func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
@@ -46,10 +47,28 @@ func (g *Game) Update() error {
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeySpace) {
-		fmt.Println("Shoot, ...")
+		if g.BulletTimer.IsReady() {
+			g.BulletTimer.Reset()
+			g.Bullets = append(g.Bullets, *NewGameObject("assets/PNG/Lasers/laserGreen05.png",
+				Vector{g.Player.Position.X + math.Sin(g.Player.Rotation)*g.Player.HalfSize.X, g.Player.Position.Y - math.Cos(g.Player.Rotation)*g.Player.HalfSize.Y},
+				g.Player.Rotation,
+				Vector{math.Sin(g.Player.Rotation) * 5, -math.Cos(g.Player.Rotation) * 5},
+				NewMessageQueue()))
+		}
 	}
 
 	g.Player.Update()
+	for i := range g.Bullets {
+		g.Bullets[i].Update()
+	}
+
+	for i := range g.Bullets {
+		if time.Since(g.Bullets[i].CreatedAt) > 2*time.Second {
+			g.Bullets = append(g.Bullets[:i], g.Bullets[i+1:]...)
+			break
+		}
+	}
+
 	for i := range g.Bullets {
 		g.Bullets[i].Update()
 	}
@@ -62,6 +81,7 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	g.BulletTimer.Update()
 	g.MeteorTimer.Update()
 	if g.MeteorTimer.IsReady() {
 		g.MeteorTimer.Reset()
@@ -72,6 +92,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			NewMessageQueue()))
 	}
 	g.Player.Draw(screen)
+
+	for i := range g.Bullets {
+		g.Bullets[i].Draw(screen)
+	}
 
 	for i := range g.Meteors {
 		g.Meteors[i].Draw(screen)
@@ -88,14 +112,15 @@ func main() {
 
 	game := &Game{
 		Player: NewGameObject("assets/PNG/playerShip1_blue.png",
-			Vector{X: 100, Y: 100},
+			Vector{X: SCREENWIDTH / 2, Y: SCREENHEIGHT / 2},
 			rand.Float64()*2*math.Pi,
 			Vector{0, 0},
 			mq),
-		MeteorTimer: NewTimer(100 * time.Millisecond),
+		BulletTimer: NewTimer(80 * time.Millisecond),
+		MeteorTimer: NewTimer(10000 * time.Millisecond),
 	}
 
-	ebiten.SetWindowSize(3200, 2000)
+	ebiten.SetWindowSize(SCREENWIDTH, SCREENHEIGHT)
 	ebiten.SetWindowTitle("My First Game")
 	err := ebiten.RunGame(game)
 	if err != nil {
