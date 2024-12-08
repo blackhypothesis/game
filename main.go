@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	_ "image/png"
 	"math"
 	"math/rand/v2"
@@ -11,8 +12,8 @@ import (
 )
 
 const (
-	SCREENWIDTH  = 2000
-	SCREENHEIGHT = 1500
+	SCREENWIDTH  = 1200
+	SCREENHEIGHT = 900
 )
 
 type Game struct {
@@ -32,27 +33,27 @@ var assets embed.FS
 
 func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		g.Player.Speed.X += -math.Sin(g.Player.Rotation) / 10
-		g.Player.Speed.Y += math.Cos(g.Player.Rotation) / 10
+		g.Player.Speed.X += -math.Sin(g.Player.Angle) / 10
+		g.Player.Speed.Y += math.Cos(g.Player.Angle) / 10
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		g.Player.Speed.X += math.Sin(g.Player.Rotation) / 10
-		g.Player.Speed.Y += -math.Cos(g.Player.Rotation) / 10
+		g.Player.Speed.X += math.Sin(g.Player.Angle) / 10
+		g.Player.Speed.Y += -math.Cos(g.Player.Angle) / 10
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		g.Player.Rotation += math.Pi / 90
+		g.Player.Angle += math.Pi / 90
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		g.Player.Rotation -= math.Pi / 90
+		g.Player.Angle -= math.Pi / 90
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeySpace) {
 		if g.BulletTimer.IsReady() {
 			g.BulletTimer.Reset()
 			g.Bullets = append(g.Bullets, *NewGameObject("assets/PNG/Lasers/laserGreen05.png",
-				Vector{g.Player.Position.X + math.Sin(g.Player.Rotation)*g.Player.HalfSize.X, g.Player.Position.Y - math.Cos(g.Player.Rotation)*g.Player.HalfSize.Y},
-				g.Player.Rotation,
-				Vector{math.Sin(g.Player.Rotation) * 5, -math.Cos(g.Player.Rotation) * 5},
+				Vector{g.Player.Position.X + math.Sin(g.Player.Angle)*g.Player.HalfSize.X, g.Player.Position.Y - math.Cos(g.Player.Angle)*g.Player.HalfSize.Y},
+				g.Player.Angle,
+				Vector{math.Sin(g.Player.Angle) * 5, -math.Cos(g.Player.Angle) * 5},
 				NewMessageQueue()))
 		}
 	}
@@ -75,6 +76,19 @@ func (g *Game) Update() error {
 
 	for i := range g.Meteors {
 		g.Meteors[i].Update()
+	}
+
+out:
+	for b := range g.Bullets {
+		for m := range g.Meteors {
+			if checkCollision(g.Bullets[b], g.Meteors[m]) {
+				fmt.Println("Deleting meteor: ", m)
+				g.Meteors = append(g.Meteors[:m], g.Meteors[m+1:]...)
+				fmt.Println("Deleting bullet: ", b)
+				g.Bullets = append(g.Bullets[:b], g.Bullets[b+1:]...)
+				break out
+			}
+		}
 	}
 
 	return nil
@@ -116,8 +130,8 @@ func main() {
 			rand.Float64()*2*math.Pi,
 			Vector{0, 0},
 			mq),
-		BulletTimer: NewTimer(80 * time.Millisecond),
-		MeteorTimer: NewTimer(10000 * time.Millisecond),
+		BulletTimer: NewTimer(100 * time.Millisecond),
+		MeteorTimer: NewTimer(500 * time.Millisecond),
 	}
 
 	ebiten.SetWindowSize(SCREENWIDTH, SCREENHEIGHT)

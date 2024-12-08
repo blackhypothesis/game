@@ -14,7 +14,7 @@ type Vector struct {
 type GameObject struct {
 	Sprite    *ebiten.Image
 	Position  Vector
-	Rotation  float64
+	Angle     float64
 	Speed     Vector
 	HalfSize  Vector
 	MsgQueue  *MessageQueue
@@ -27,7 +27,7 @@ func NewGameObject(assetPath string, position Vector, rotation float64, speed Ve
 	gameObject := new(GameObject)
 	gameObject.Sprite = spriteImage
 	gameObject.Position = position
-	gameObject.Rotation = rotation
+	gameObject.Angle = rotation
 	gameObject.Speed = speed
 	gameObject.HalfSize = Vector{float64(spriteImage.Bounds().Dx()) / 2, float64(spriteImage.Bounds().Dy()) / 2}
 	gameObject.MsgQueue = msgQueue
@@ -63,7 +63,7 @@ func (g *GameObject) Update() {
 func (g *GameObject) Draw(screen *ebiten.Image) {
 	opts := new(ebiten.DrawImageOptions)
 	opts.GeoM.Translate(-g.HalfSize.X, -g.HalfSize.Y)
-	opts.GeoM.Rotate(g.Rotation)
+	opts.GeoM.Rotate(g.Angle)
 	opts.GeoM.Translate(g.Position.X, g.Position.Y)
 	screen.DrawImage(g.Sprite, opts)
 }
