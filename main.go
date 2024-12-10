@@ -4,15 +4,14 @@ import (
 	"embed"
 	_ "image/png"
 	"math"
-	"math/rand/v2"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
-	SCREENWIDTH  = 2600
-	SCREENHEIGHT = 1600
+	SCREENWIDTH  = 1500
+	SCREENHEIGHT = 800
 )
 
 type Game struct {
@@ -50,31 +49,18 @@ func (g *Game) Update() error {
 		g.BulletTimer.Update()
 		if g.BulletTimer.IsReady() {
 			g.BulletTimer.Reset()
-			g.Bullets = append(g.Bullets, *NewGameObject("assets/PNG/Lasers/laserGreen05.png",
-				Vector{g.Player.Position.X + math.Sin(g.Player.Angle)*g.Player.HalfSize.X, g.Player.Position.Y - math.Cos(g.Player.Angle)*g.Player.HalfSize.Y},
-				Vector{1, 1},
-				g.Player.Angle,
-				Vector{math.Sin(g.Player.Angle) * 15, -math.Cos(g.Player.Angle) * 15},
-				0,
-				NewMessageQueue()))
+			g.Bullets = append(g.Bullets, *NewBullet(g.Player))
 		}
 	}
 
 	g.MeteorTimer.Update()
 	if g.MeteorTimer.IsReady() {
 		g.MeteorTimer.Reset()
-		meteorScale := randomFloat(0.5, 4)
-		g.Meteors = append(g.Meteors, *NewGameObject("assets/PNG/Meteors/meteorBrown_big1.png",
-			Vector{500, 500},
-			Vector{meteorScale, meteorScale},
-			rand.Float64()*2*math.Pi,
-			Vector{randomFloat(-3, 3), randomFloat(-3, 3)},
-			randomFloat(-0.05, 0.05),
-			NewMessageQueue()))
+		g.Meteors = append(g.Meteors, *NewMeteor())
 	}
 
 	for i := range g.Bullets {
-		if time.Since(g.Bullets[i].CreatedAt) > 3*time.Second {
+		if time.Since(g.Bullets[i].CreatedAt) > 2*time.Second {
 			g.Bullets = append(g.Bullets[:i], g.Bullets[i+1:]...)
 			break
 		}
@@ -96,13 +82,9 @@ out:
 			if checkCollision(g.Bullets[b], g.Meteors[m]) {
 				if g.Meteors[m].Scale.X > 1 {
 					for i := 2; i < 6; i++ {
-						g.Meteors = append(g.Meteors, *NewGameObject("assets/PNG/Meteors/meteorBrown_big1.png",
-							g.Meteors[m].Position,
-							Vector{g.Meteors[m].Scale.X / float64(i), g.Meteors[m].Scale.Y / float64(i)},
-							rand.Float64()*2*math.Pi,
-							Vector{randomFloat(-3, 3), randomFloat(-3, 3)},
-							randomFloat(-0.05, 0.05),
-							NewMessageQueue()))
+						g.Meteors = append(g.Meteors,
+							*NewMeteorDebris(g.Meteors[m].Position,
+								Vector{g.Meteors[m].Scale.X / float64(i), g.Meteors[m].Scale.Y / float64(i)}))
 					}
 				}
 				g.Meteors = append(g.Meteors[:m], g.Meteors[m+1:]...)
@@ -143,8 +125,8 @@ func main() {
 			Vector{0, 0},
 			0,
 			mq),
-		BulletTimer: NewTimer(25 * time.Millisecond),
-		MeteorTimer: NewTimer(200 * time.Millisecond),
+		BulletTimer: NewTimer(250 * time.Millisecond),
+		MeteorTimer: NewTimer(4000 * time.Millisecond),
 	}
 
 	ebiten.SetWindowSize(SCREENWIDTH, SCREENHEIGHT)

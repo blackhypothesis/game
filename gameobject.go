@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math"
+	"math/rand/v2"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -37,6 +39,38 @@ func NewGameObject(sprite string, position Vector, scale Vector, angle float64, 
 	gameObject.MsgQueue = msgQueue
 	gameObject.CreatedAt = time.Now()
 	return gameObject
+}
+
+func NewBullet(player *GameObject) *GameObject {
+
+	return NewGameObject("assets/PNG/Lasers/laserGreen05.png",
+		Vector{player.Position.X + math.Sin(player.Angle)*player.HalfSize.X, player.Position.Y - math.Cos(player.Angle)*player.HalfSize.Y},
+		Vector{1, 1},
+		player.Angle,
+		Vector{math.Sin(player.Angle) * 15, -math.Cos(player.Angle) * 15},
+		0,
+		NewMessageQueue())
+}
+
+func NewMeteor() *GameObject {
+	meteorScale := randomFloat(0.5, 2)
+	return NewGameObject("assets/PNG/Meteors/meteorBrown_big1.png",
+		Vector{500, 500},
+		Vector{meteorScale, meteorScale},
+		rand.Float64()*2*math.Pi,
+		Vector{randomFloat(-3, 3), randomFloat(-3, 3)},
+		randomFloat(-0.05, 0.05),
+		NewMessageQueue())
+}
+
+func NewMeteorDebris(position Vector, scale Vector) *GameObject {
+	return NewGameObject("assets/PNG/Meteors/meteorBrown_big1.png",
+		position,
+		scale,
+		rand.Float64()*2*math.Pi,
+		Vector{randomFloat(-3, 3), randomFloat(-3, 3)},
+		randomFloat(-0.05, 0.05),
+		NewMessageQueue())
 }
 
 func (g *GameObject) Move() {
