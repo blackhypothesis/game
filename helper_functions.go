@@ -68,7 +68,7 @@ func randomFloat(min float64, max float64) float64 {
 }
 
 func checkCollision(obj1, obj2 GameObject) bool {
-	if (math.Abs(obj1.Position.X-obj2.Position.X) < obj2.HalfSize.X) && (math.Abs(obj1.Position.Y-obj2.Position.Y) < obj2.HalfSize.Y) {
+	if (math.Abs(obj1.Position.X-obj2.Position.X) < obj2.HalfSize.X*obj2.Scale.X) && (math.Abs(obj1.Position.Y-obj2.Position.Y) < obj2.HalfSize.Y*obj2.Scale.Y) {
 		return true
 	}
 	return false

@@ -40,10 +40,10 @@ func (g *Game) Update() error {
 		g.Player.Speed.Y += -math.Cos(g.Player.Angle) / 10
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		g.Player.Angle += math.Pi / 90
+		g.Player.Angle -= math.Pi / 90
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		g.Player.Angle -= math.Pi / 90
+		g.Player.Angle += math.Pi / 90
 	}
 
 	if ebiten.IsKeyPressed(ebiten.KeySpace) {
@@ -52,8 +52,10 @@ func (g *Game) Update() error {
 			g.BulletTimer.Reset()
 			g.Bullets = append(g.Bullets, *NewGameObject("assets/PNG/Lasers/laserGreen05.png",
 				Vector{g.Player.Position.X + math.Sin(g.Player.Angle)*g.Player.HalfSize.X, g.Player.Position.Y - math.Cos(g.Player.Angle)*g.Player.HalfSize.Y},
+				Vector{1, 1},
 				g.Player.Angle,
-				Vector{math.Sin(g.Player.Angle) * 10, -math.Cos(g.Player.Angle) * 10},
+				Vector{math.Sin(g.Player.Angle) * 15, -math.Cos(g.Player.Angle) * 15},
+				0,
 				NewMessageQueue()))
 		}
 	}
@@ -61,15 +63,18 @@ func (g *Game) Update() error {
 	g.MeteorTimer.Update()
 	if g.MeteorTimer.IsReady() {
 		g.MeteorTimer.Reset()
+		meteorScale := randomFloat(0.5, 4)
 		g.Meteors = append(g.Meteors, *NewGameObject("assets/PNG/Meteors/meteorBrown_big1.png",
-			Vector{X: 500, Y: 500},
+			Vector{500, 500},
+			Vector{meteorScale, meteorScale},
 			rand.Float64()*2*math.Pi,
 			Vector{randomFloat(-3, 3), randomFloat(-3, 3)},
+			randomFloat(-0.05, 0.05),
 			NewMessageQueue()))
 	}
 
 	for i := range g.Bullets {
-		if time.Since(g.Bullets[i].CreatedAt) > 2*time.Second {
+		if time.Since(g.Bullets[i].CreatedAt) > 3*time.Second {
 			g.Bullets = append(g.Bullets[:i], g.Bullets[i+1:]...)
 			break
 		}
@@ -89,6 +94,17 @@ out:
 	for b := range g.Bullets {
 		for m := range g.Meteors {
 			if checkCollision(g.Bullets[b], g.Meteors[m]) {
+				if g.Meteors[m].Scale.X > 1 {
+					for i := 2; i < 6; i++ {
+						g.Meteors = append(g.Meteors, *NewGameObject("assets/PNG/Meteors/meteorBrown_big1.png",
+							g.Meteors[m].Position,
+							Vector{g.Meteors[m].Scale.X / float64(i), g.Meteors[m].Scale.Y / float64(i)},
+							rand.Float64()*2*math.Pi,
+							Vector{randomFloat(-3, 3), randomFloat(-3, 3)},
+							randomFloat(-0.05, 0.05),
+							NewMessageQueue()))
+					}
+				}
 				g.Meteors = append(g.Meteors[:m], g.Meteors[m+1:]...)
 				g.Bullets = append(g.Bullets[:b], g.Bullets[b+1:]...)
 				break out
@@ -121,12 +137,14 @@ func main() {
 
 	game := &Game{
 		Player: NewGameObject("assets/PNG/playerShip1_blue.png",
-			Vector{X: SCREENWIDTH / 2, Y: SCREENHEIGHT / 2},
-			rand.Float64()*2*math.Pi,
+			Vector{SCREENWIDTH / 2, SCREENHEIGHT / 2},
+			Vector{1, 1},
+			0,
 			Vector{0, 0},
+			0,
 			mq),
-		BulletTimer: NewTimer(250 * time.Millisecond),
-		MeteorTimer: NewTimer(4000 * time.Millisecond),
+		BulletTimer: NewTimer(25 * time.Millisecond),
+		MeteorTimer: NewTimer(200 * time.Millisecond),
 	}
 
 	ebiten.SetWindowSize(SCREENWIDTH, SCREENHEIGHT)

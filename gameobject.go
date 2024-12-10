@@ -12,23 +12,27 @@ type Vector struct {
 }
 
 type GameObject struct {
-	Sprite    *ebiten.Image
-	Position  Vector
-	Angle     float64
-	Speed     Vector
-	HalfSize  Vector
-	MsgQueue  *MessageQueue
-	CreatedAt time.Time
+	Sprite        *ebiten.Image
+	Position      Vector
+	Scale         Vector
+	Angle         float64
+	Speed         Vector
+	RotationSpeed float64
+	HalfSize      Vector
+	MsgQueue      *MessageQueue
+	CreatedAt     time.Time
 }
 
-func NewGameObject(assetPath string, position Vector, rotation float64, speed Vector, msgQueue *MessageQueue) *GameObject {
-	spriteImage := loadImage(assetPath)
+func NewGameObject(sprite string, position Vector, scale Vector, angle float64, speed Vector, rotationSpeed float64, msgQueue *MessageQueue) *GameObject {
+	spriteImage := loadImage(sprite)
 
 	gameObject := new(GameObject)
 	gameObject.Sprite = spriteImage
 	gameObject.Position = position
-	gameObject.Angle = rotation
+	gameObject.Scale = scale
+	gameObject.Angle = angle
 	gameObject.Speed = speed
+	gameObject.RotationSpeed = rotationSpeed
 	gameObject.HalfSize = Vector{float64(spriteImage.Bounds().Dx()) / 2, float64(spriteImage.Bounds().Dy()) / 2}
 	gameObject.MsgQueue = msgQueue
 	gameObject.CreatedAt = time.Now()
@@ -54,6 +58,8 @@ func (g *GameObject) Move() {
 	if g.Position.Y < 0 {
 		g.Position.Y += SCREENHEIGHT
 	}
+
+	g.Angle += g.RotationSpeed
 }
 
 func (g *GameObject) Update() {
@@ -63,6 +69,7 @@ func (g *GameObject) Update() {
 func (g *GameObject) Draw(screen *ebiten.Image) {
 	opts := new(ebiten.DrawImageOptions)
 	opts.GeoM.Translate(-g.HalfSize.X, -g.HalfSize.Y)
+	opts.GeoM.Scale(g.Scale.X, g.Scale.Y)
 	opts.GeoM.Rotate(g.Angle)
 	opts.GeoM.Translate(g.Position.X, g.Position.Y)
 	screen.DrawImage(g.Sprite, opts)
